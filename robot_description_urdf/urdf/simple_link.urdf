@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<robot name="materials">
+
+    <material name="blue">
+        <color rgba="0 0 0.8 1"/>
+    </material>
+
+    <link name="base_link">
+        <visual>
+            <geometry>
+                <cylinder length="0.6" radius="0.2"/>
+            </geometry>
+
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <material name="blue"/>
+        </visual>
+
+        <collision>
+            <geometry>
+                <cylinder length="0.6" radius="0.2"/>
+            </geometry>
+
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+        </collision>
+
+        <inertial>
+            <mass value="10"/>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <inertia 
+                ixx="1e-3" ixy="0.0" ixz="0.0" 
+                iyy="1e-3" iyz="0.0" 
+                izz="1e-3"/>
+        </inertial>
+    </link>
+</robot>
