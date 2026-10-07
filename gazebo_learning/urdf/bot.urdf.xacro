@@ -1,0 +1,230 @@
+<?xml version="1.0"?>
+<robot name="teslabot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ===== PROPERTIES ===== -->
+  <!-- Sizes (metres) -->
+  <xacro:property name="head_height"     value="1.6"/>   <!-- head position above the ground -->
+  <xacro:property name="head_radius"     value="0.12"/>
+  <xacro:property name="body_x"          value="0.2"/>   <!-- depth -->
+  <xacro:property name="body_y"          value="0.4"/>   <!-- width -->
+  <xacro:property name="body_z"          value="0.5"/>   <!-- height -->
+  <xacro:property name="shoulder_radius" value="0.06"/>
+  <xacro:property name="shoulder_offset" value="0.26"/>  <!-- sideways distance from body center -->
+  <xacro:property name="upper_length"    value="0.3"/>
+  <xacro:property name="upper_radius"    value="0.04"/>
+  <xacro:property name="lower_length"    value="0.25"/>
+  <xacro:property name="lower_radius"    value="0.035"/>
+  <xacro:property name="hand_x"          value="0.04"/>
+  <xacro:property name="hand_y"          value="0.08"/>
+  <xacro:property name="hand_z"          value="0.1"/>
+
+  <!-- Masses (kg) -->
+  <xacro:property name="head_mass"     value="1.0"/>
+  <xacro:property name="body_mass"     value="5.0"/>
+  <xacro:property name="shoulder_mass" value="0.5"/>
+  <xacro:property name="upper_mass"    value="1.0"/>
+  <xacro:property name="lower_mass"    value="0.8"/>
+  <xacro:property name="hand_mass"     value="0.3"/>
+
+  <!-- ===== MATERIALS ===== -->
+  <material name="grey">
+    <color rgba="0.8 0.8 0.8 1"/>
+  </material>
+  <material name="black">
+    <color rgba="0.1 0.1 0.1 1"/>
+  </material>
+
+  <!-- ===== INERTIA MACROS (standard formulas for solid shapes) ===== -->
+  <xacro:macro name="inertial_box" params="mass x y z xyz">
+    <inertial>
+      <origin xyz="${xyz}" rpy="0 0 0"/>
+      <mass value="${mass}"/>
+      <inertia ixx="${mass*(y*y+z*z)/12}" ixy="0" ixz="0"
+               iyy="${mass*(x*x+z*z)/12}" iyz="0"
+               izz="${mass*(x*x+y*y)/12}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="inertial_cylinder" params="mass r h xyz">
+    <inertial>
+      <origin xyz="${xyz}" rpy="0 0 0"/>
+      <mass value="${mass}"/>
+      <inertia ixx="${mass*(3*r*r+h*h)/12}" ixy="0" ixz="0"
+               iyy="${mass*(3*r*r+h*h)/12}" iyz="0"
+               izz="${mass*r*r/2}"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="inertial_sphere" params="mass r xyz">
+    <inertial>
+      <origin xyz="${xyz}" rpy="0 0 0"/>
+      <mass value="${mass}"/>
+      <inertia ixx="${2*mass*r*r/5}" ixy="0" ixz="0"
+               iyy="${2*mass*r*r/5}" iyz="0"
+               izz="${2*mass*r*r/5}"/>
+    </inertial>
+  </xacro:macro>
+
+  <!-- ===== ARM MACRO: shoulder, upper arm, lower arm, hand. reflect = -1 for right, 1 for left ===== -->
+  <xacro:macro name="arm" params="side reflect">
+
+    <!-- Shoulder -->
+    <link name="shoulder_${side}">
+      <visual>
+        <geometry>
+          <sphere radius="${shoulder_radius}"/>
+        </geometry>
+        <material name="black"/>
+      </visual>
+      <collision>
+        <geometry>
+          <sphere radius="${shoulder_radius}"/>
+        </geometry>
+      </collision>
+      <xacro:inertial_sphere mass="${shoulder_mass}" r="${shoulder_radius}" xyz="0 0 0"/>
+    </link>
+
+    <!-- Swings the arm forward and backward -->
+    <joint name="body_to_shoulder_${side}" type="revolute">
+      <parent link="body"/>
+      <child link="shoulder_${side}"/>
+      <origin xyz="0 ${reflect*shoulder_offset} ${-shoulder_radius}" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="${-pi/2}" upper="${pi/2}" effort="50" velocity="2"/>
+    </joint>
+
+    <!-- Upper arm -->
+    <link name="arm_upper_${side}">
+      <visual>
+        <geometry>
+          <cylinder length="${upper_length}" radius="${upper_radius}"/>
+        </geometry>
+        <origin xyz="0 0 ${-upper_length/2}" rpy="0 0 0"/>
+        <material name="grey"/>
+      </visual>
+      <collision>
+        <geometry>
+          <cylinder length="${upper_length}" radius="${upper_radius}"/>
+        </geometry>
+        <origin xyz="0 0 ${-upper_length/2}" rpy="0 0 0"/>
+      </collision>
+      <xacro:inertial_cylinder mass="${upper_mass}" r="${upper_radius}" h="${upper_length}" xyz="0 0 ${-upper_length/2}"/>
+    </link>
+
+    <!-- Lifts the arm sideways, away from the body -->
+    <joint name="shoulder_to_arm_upper_${side}" type="revolute">
+      <parent link="shoulder_${side}"/>
+      <child link="arm_upper_${side}"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <axis xyz="${reflect} 0 0"/>
+      <limit lower="-0.2" upper="${pi/2}" effort="50" velocity="2"/>
+    </joint>
+
+    <!-- Lower arm -->
+    <link name="arm_lower_${side}">
+      <visual>
+        <geometry>
+          <cylinder length="${lower_length}" radius="${lower_radius}"/>
+        </geometry>
+        <origin xyz="0 0 ${-lower_length/2}" rpy="0 0 0"/>
+        <material name="grey"/>
+      </visual>
+      <collision>
+        <geometry>
+          <cylinder length="${lower_length}" radius="${lower_radius}"/>
+        </geometry>
+        <origin xyz="0 0 ${-lower_length/2}" rpy="0 0 0"/>
+      </collision>
+      <xacro:inertial_cylinder mass="${lower_mass}" r="${lower_radius}" h="${lower_length}" xyz="0 0 ${-lower_length/2}"/>
+    </link>
+
+    <!-- Elbow: bends the lower arm forward -->
+    <joint name="arm_upper_to_lower_${side}" type="revolute">
+      <parent link="arm_upper_${side}"/>
+      <child link="arm_lower_${side}"/>
+      <origin xyz="0 0 ${-upper_length}" rpy="0 0 0"/>
+      <axis xyz="0 -1 0"/>
+      <limit lower="0" upper="2.4" effort="30" velocity="2"/>
+    </joint>
+
+    <!-- Hand -->
+    <link name="hand_${side}">
+      <visual>
+        <geometry>
+          <box size="${hand_x} ${hand_y} ${hand_z}"/>
+        </geometry>
+        <origin xyz="0 0 ${-hand_z/2}" rpy="0 0 0"/>
+        <material name="black"/>
+      </visual>
+      <collision>
+        <geometry>
+          <box size="${hand_x} ${hand_y} ${hand_z}"/>
+        </geometry>
+        <origin xyz="0 0 ${-hand_z/2}" rpy="0 0 0"/>
+      </collision>
+      <xacro:inertial_box mass="${hand_mass}" x="${hand_x}" y="${hand_y}" z="${hand_z}" xyz="0 0 ${-hand_z/2}"/>
+    </link>
+
+    <joint name="arm_lower_to_hand_${side}" type="fixed">
+      <parent link="arm_lower_${side}"/>
+      <child link="hand_${side}"/>
+      <origin xyz="0 0 ${-lower_length}" rpy="0 0 0"/>
+    </joint>
+
+  </xacro:macro>
+
+  <!-- ===== ROBOT ===== -->
+  <!-- World: the fixed ground in Gazebo. Attaching to it pins the robot in place -->
+  <link name="world"/>
+
+  <!-- Head -->
+  <link name="head">
+    <visual>
+      <geometry>
+        <sphere radius="${head_radius}"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <geometry>
+        <sphere radius="${head_radius}"/>
+      </geometry>
+    </collision>
+    <xacro:inertial_sphere mass="${head_mass}" r="${head_radius}" xyz="0 0 0"/>
+  </link>
+
+  <joint name="world_to_head" type="fixed">
+    <parent link="world"/>
+    <child link="head"/>
+    <origin xyz="0 0 ${head_height}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Body: hangs below the head -->
+  <link name="body">
+    <visual>
+      <geometry>
+        <box size="${body_x} ${body_y} ${body_z}"/>
+      </geometry>
+      <origin xyz="0 0 ${-body_z/2}" rpy="0 0 0"/>
+      <material name="grey"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="${body_x} ${body_y} ${body_z}"/>
+      </geometry>
+      <origin xyz="0 0 ${-body_z/2}" rpy="0 0 0"/>
+    </collision>
+    <xacro:inertial_box mass="${body_mass}" x="${body_x}" y="${body_y}" z="${body_z}" xyz="0 0 ${-body_z/2}"/>
+  </link>
+
+  <joint name="head_to_body" type="fixed">
+    <parent link="head"/>
+    <child link="body"/>
+    <origin xyz="0 0 ${-head_radius}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Arms -->
+  <xacro:arm side="right" reflect="-1"/>
+  <xacro:arm side="left"  reflect="1"/>
+
+</robot>
