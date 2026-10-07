@@ -1,0 +1,24 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 100  # Hz
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    joint_trajectory_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+joint_trajectory_controller:
+  ros__parameters:
+    joints:
+      - body_to_shoulder_right
+      - body_to_shoulder_left
+      - shoulder_to_arm_upper_right
+      - shoulder_to_arm_upper_left
+      - arm_upper_to_lower_right
+      - arm_upper_to_lower_left
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity

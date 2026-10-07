@@ -9,6 +9,13 @@
 
   <depend>rclpy</depend>
   <depend>trajectory_msgs</depend>
+  <depend>xacro</depend>
+  <depend>robot_state_publisher</depend>
+  <depend>gazebo_ros</depend>
+  <depend>gazebo_ros2_control</depend>
+  <depend>controller_manager</depend>
+  <depend>joint_state_broadcaster</depend>
+  <depend>joint_trajectory_controller</depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
