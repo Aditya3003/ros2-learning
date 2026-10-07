@@ -252,7 +252,7 @@
   <!-- Gazebo plugin: starts the controller manager inside Gazebo, using our controller config -->
   <gazebo>
     <plugin filename="libgazebo_ros2_control.so" name="gazebo_ros2_control">
-      <parameters>$(find gazebo_tutorial)/config/joint_controller.yaml</parameters>  <!-- (package name) -->
+      <parameters>$(find gazebo_learning)/config/joint_controller.yaml</parameters>  <!-- (package name) -->
     </plugin>
   </gazebo>
 

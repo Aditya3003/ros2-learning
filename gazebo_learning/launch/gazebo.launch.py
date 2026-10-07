@@ -1,5 +1,6 @@
 import os
 import xacro
+import re
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, RegisterEventHandler
@@ -9,12 +10,12 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    package_name = 'gazebo_tutorial'  # (package name)
+    package_name = 'gazebo_learning'  # (package name)
     pkg_share = get_package_share_directory(package_name)
 
     # Turn the xacro file into plain URDF text
-    xacro_file = os.path.join(pkg_share, 'urdf', 'teslabot.urdf.xacro')
-    robot_description = xacro.process_file(xacro_file).toxml()
+    xacro_file = os.path.join(pkg_share, 'urdf', 'bot.urdf.xacro')
+    robot_description = re.sub(r'<!--.*?-->', '', xacro.process_file(xacro_file).toxml(), flags=re.DOTALL)
 
     # 1. Launch Gazebo (reuses gazebo_ros's own launch file)
     gazebo = IncludeLaunchDescription(
