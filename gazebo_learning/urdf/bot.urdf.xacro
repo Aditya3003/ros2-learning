@@ -227,4 +227,33 @@
   <xacro:arm side="right" reflect="-1"/>
   <xacro:arm side="left"  reflect="1"/>
 
+    <!-- ===== ROS 2 CONTROL ===== -->
+  <!-- One entry per controllable joint: we command position, and read position and velocity back -->
+  <xacro:macro name="control_joint" params="name">
+    <joint name="${name}">
+      <command_interface name="position"/>
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+    </joint>
+  </xacro:macro>
+
+  <ros2_control name="GazeboSystem" type="system">
+    <hardware>
+      <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+    </hardware>
+    <xacro:control_joint name="body_to_shoulder_right"/>
+    <xacro:control_joint name="body_to_shoulder_left"/>
+    <xacro:control_joint name="shoulder_to_arm_upper_right"/>
+    <xacro:control_joint name="shoulder_to_arm_upper_left"/>
+    <xacro:control_joint name="arm_upper_to_lower_right"/>
+    <xacro:control_joint name="arm_upper_to_lower_left"/>
+  </ros2_control>
+
+  <!-- Gazebo plugin: starts the controller manager inside Gazebo, using our controller config -->
+  <gazebo>
+    <plugin filename="libgazebo_ros2_control.so" name="gazebo_ros2_control">
+      <parameters>$(find gazebo_tutorial)/config/joint_controller.yaml</parameters>  <!-- (package name) -->
+    </plugin>
+  </gazebo>
+
 </robot>
