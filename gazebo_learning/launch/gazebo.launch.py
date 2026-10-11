@@ -3,7 +3,7 @@ import xacro
 import re
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, RegisterEventHandler
+from launch.actions import IncludeLaunchDescription, RegisterEventHandler, ExecuteProcess
 from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
@@ -56,10 +56,18 @@ def generate_launch_description():
         output='screen',
     )
 
+    # 6. Run Plotjuggler to visualize the joint states and trajectories
+    run_plotjuggler = ExecuteProcess(
+        cmd = [ 'ros2' , 'run', 'plotjuggler', 'plotjuggler' ],
+        output = 'screen',
+        shell = True
+    )
+
     return LaunchDescription([
         gazebo,
         robot_state_publisher,
         spawn_robot,
+        run_plotjuggler,
         # Start the controllers only after the robot exists, one after another
         RegisterEventHandler(OnProcessExit(target_action=spawn_robot, on_exit=[joint_state_broadcaster])),
         RegisterEventHandler(OnProcessExit(target_action=joint_state_broadcaster, on_exit=[joint_trajectory_controller])),
