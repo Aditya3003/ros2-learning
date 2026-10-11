@@ -63,11 +63,19 @@ def generate_launch_description():
         shell = True
     )
 
+    # Joint state publisher
+    joint_state_publihser_node = Node(
+        package='joint_state_publisher',
+        executable='joint_state_publisher',
+        output='screen'
+    )
+
     return LaunchDescription([
         gazebo,
         robot_state_publisher,
         spawn_robot,
         run_plotjuggler,
+        joint_state_publihser_node,
         # Start the controllers only after the robot exists, one after another
         RegisterEventHandler(OnProcessExit(target_action=spawn_robot, on_exit=[joint_state_broadcaster])),
         RegisterEventHandler(OnProcessExit(target_action=joint_state_broadcaster, on_exit=[joint_trajectory_controller])),
