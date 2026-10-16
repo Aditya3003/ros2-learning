@@ -1,30 +1,43 @@
 import os
-import xacro
 import re
+import xacro
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, RegisterEventHandler, ExecuteProcess
+from launch.actions import IncludeLaunchDescription, RegisterEventHandler
 from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    package_name = 'gazebo_learning'  # (package name)
+    package_name = 'gazebo_learning'
     pkg_share = get_package_share_directory(package_name)
 
-    # Turn the xacro file into plain URDF text
     xacro_file = os.path.join(pkg_share, 'urdf', 'bot.urdf.xacro')
     robot_description = re.sub(r'<!--.*?-->', '', xacro.process_file(xacro_file).toxml(), flags=re.DOTALL)
 
-    # 1. Launch Gazebo (reuses gazebo_ros's own launch file)
+    world_file = os.path.join(pkg_share, 'worlds', 'sensor_world.sdf')
+
+    # 1. Gazebo with our world
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(get_package_share_directory('gazebo_ros'), 'launch', 'gazebo.launch.py')
-        )
+            os.path.join(get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py')
+        ),
+        launch_arguments={'gz_args': f'-r {world_file}'}.items(),
     )
 
-    # 2. Robot State Publisher: publishes the robot model and link positions
+    # 2. Bridge: Gazebo -> ROS 2 for the clock and the lidar scan
+    bridge = Node(
+        package='ros_gz_bridge',
+        executable='parameter_bridge',
+        arguments=[
+            '/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
+            '/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
+        ],
+        output='screen',
+    )
+
+    # 3. Robot State Publisher
     robot_state_publisher = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
@@ -32,15 +45,15 @@ def generate_launch_description():
         parameters=[{'robot_description': robot_description, 'use_sim_time': True}],
     )
 
-    # 3. Spawn the robot into Gazebo, using the model published on /robot_description
+    # 4. Spawn the robot
     spawn_robot = Node(
-        package='gazebo_ros',
-        executable='spawn_entity.py',
-        arguments=['-topic', 'robot_description', '-entity', 'bot'],
+        package='ros_gz_sim',
+        executable='create',
+        arguments=['-topic', 'robot_description', '-name', 'bot'],
         output='screen',
     )
 
-    # 4. Joint State Broadcaster: publishes the joints' current positions
+    # 5. Controllers
     joint_state_broadcaster = Node(
         package='controller_manager',
         executable='spawner',
@@ -48,7 +61,6 @@ def generate_launch_description():
         output='screen',
     )
 
-    # 5. Joint Trajectory Controller: receives target trajectories and moves the joints
     joint_trajectory_controller = Node(
         package='controller_manager',
         executable='spawner',
@@ -56,27 +68,11 @@ def generate_launch_description():
         output='screen',
     )
 
-    # 6. Run Plotjuggler to visualize the joint states and trajectories
-    run_plotjuggler = ExecuteProcess(
-        cmd = [ 'ros2' , 'run', 'plotjuggler', 'plotjuggler' ],
-        output = 'screen',
-        shell = True
-    )
-
-    # Joint state publisher
-    joint_state_publihser_node = Node(
-        package='joint_state_publisher',
-        executable='joint_state_publisher',
-        output='screen'
-    )
-
     return LaunchDescription([
         gazebo,
+        bridge,
         robot_state_publisher,
         spawn_robot,
-        run_plotjuggler,
-        joint_state_publihser_node,
-        # Start the controllers only after the robot exists, one after another
         RegisterEventHandler(OnProcessExit(target_action=spawn_robot, on_exit=[joint_state_broadcaster])),
         RegisterEventHandler(OnProcessExit(target_action=joint_state_broadcaster, on_exit=[joint_trajectory_controller])),
     ])
