@@ -250,29 +250,6 @@
   </ros2_control>
 
   <gazebo reference="head">
-  <sensor name="camera" type="camera">
-    <pose>0.12 0 0 0 0.7 0</pose>
-    <topic>camera/image</topic>
-    <gz_frame_id>head</gz_frame_id>
-    <update_rate>5</update_rate>
-    <always_on>true</always_on>
-    <visualize>true</visualize>
-    <camera>
-      <horizontal_fov>1.35</horizontal_fov>
-      <image>
-        <width>640</width>
-        <height>480</height>
-        <format>R8G8B8</format>
-      </image>
-      <clip>
-        <near>0.05</near>
-        <far>10</far>
-      </clip>
-    </camera>
-  </sensor>
-</gazebo>
-
-  <gazebo reference="head">
     <sensor name="lidar" type="gpu_lidar">
       <pose>0 0 0 0 0 0</pose>
       <topic>scan</topic>
@@ -297,6 +274,55 @@
       </lidar>
     </sensor>
   </gazebo>
+
+  <!-- ===== DEPTH CAMERA ===== -->
+<!-- Camera body: normal link frame (x forward), on the front of the head, tilted down 40° -->
+<link name="camera_link"/>
+
+<joint name="camera_joint" type="fixed">
+  <parent link="head"/>
+  <child link="camera_link"/>
+  <origin xyz="0.12 0 0" rpy="0 0.7 0"/>
+</joint>
+
+<!-- Optical frame: same position, axes rotated to z forward, x right, y down -->
+<link name="camera_link_optical"/>
+
+<joint name="camera_optical_joint" type="fixed">
+  <parent link="camera_link"/>
+  <child link="camera_link_optical"/>
+  <origin xyz="0 0 0" rpy="${-pi/2} 0 ${-pi/2}"/>
+</joint>
+
+<!-- Depth camera: color image, depth image, and point cloud in one sensor -->
+<gazebo reference="camera_link">
+  <sensor name="depth_camera" type="rgbd_camera">
+    <pose>0 0 0 0 0 0</pose>
+    <topic>depth_camera</topic>
+    <gz_frame_id>camera_link</gz_frame_id>
+    <update_rate>10</update_rate>
+    <always_on>true</always_on>
+    <visualize>true</visualize>
+    <camera>
+      <horizontal_fov>1.35</horizontal_fov>
+      <image>
+        <width>640</width>
+        <height>480</height>
+        <format>R8G8B8</format>
+      </image>
+      <clip>
+        <near>0.05</near>
+        <far>10</far>
+      </clip>
+      <depth_camera>
+        <clip>
+          <near>0.1</near>
+          <far>10</far>
+        </clip>
+      </depth_camera>
+    </camera>
+  </sensor>
+</gazebo>
 
   <!-- Gazebo plugin: starts the controller manager inside Gazebo, using our controller config -->
   <gazebo>
